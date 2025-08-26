@@ -1,0 +1,196 @@
+@startuml MCP Architecture Comprehensive
+
+' Set background color to light yellow
+skinparam backgroundColor #FFFCE8
+
+' Define components
+rectangle "Developer Environment" {
+rectangle "IntelliJ IDEA" {
+rectangle "Continue Plugin" as ContinuePlugin #LightBlue {
+component "MCP Client" as MCPClient
+}
+}
+}
+
+rectangle "Your Organization" {
+rectangle "Spring Boot" {
+component "MCP Server" as MCPServer #LightGreen {
+component "Tool Registry" as ToolRegistry #LightGreen
+component "Tool Discovery API" as ToolDiscovery #LightGreen
+}
+}
+cloud "AWS Cloud" {
+rectangle "Claude LLM" as ClaudeLLM #LightPink {
+component "LLM Host" as LLMHost
+}
+}
+
+' External systems as tools
+cloud "Azure Cloud" {
+rectangle "Azure DevOps" {
+component "Azure DevOps Pipeline" as AzurePipeline #LightYellow {
+component "Pipeline Tools" as PipelineTools #Yellow
+}
+component "Azure DevOps Board" as AzureBoard #LightYellow {
+component "Board Tools" as BoardTools #Yellow
+}
+}
+}
+
+rectangle "Polarion" {
+component "Polarion Documents" as PolarionDocs #Orange {
+component "Document Tools" as DocTools #Orange
+}
+}
+
+rectangle "SonarQube Server" as SonarQubeServer #LightCyan {
+component "Code Analysis" as SonarQubeAnalysis #LightCyan {
+component "Analysis Tools" as AnalysisTools #Cyan
+}
+}
+
+' New Test Document System with Vector DB - updated colors
+rectangle "Test Document System" as TestDocSystem #LightCyan {
+component "Vector/Graph DB" as VectorDB #LightBlue {
+component "PDF Embeddings" as PDFEmbeddings #LightBlue
+}
+component "Test Document Tools" as TestDocTools #LightBlue
+}
+}
+
+' Define primary MCP relationships
+' Solid lines for requests, dotted lines for responses
+MCPClient -right-> MCPServer : "MCP Request"
+MCPServer -..left..> MCPClient : "MCP Response"
+
+' Tool discovery flow
+MCPClient -right-> ToolDiscovery : "1. Tool Discovery Request"
+ToolDiscovery -..left..> MCPClient : "2. Available Tools Response"
+
+' Tool registry relationships
+ToolRegistry -down-> PipelineTools : "Registers"
+ToolRegistry -down-> BoardTools : "Registers"
+ToolRegistry -down-> DocTools : "Registers"
+ToolRegistry -down-> AnalysisTools : "Registers"
+ToolRegistry -down-> TestDocTools : "Registers"
+
+MCPClient -down-> LLMHost : "Direct Communication\n(API Calls)"
+LLMHost -..up..> MCPClient : "LLM Responses"
+
+' Define MCP Server interactions with external systems
+' Solid lines for requests, dotted lines for responses
+MCPServer -down-> AzurePipeline : "3. Tool Execution:\nTrigger/Monitor Pipelines"
+AzurePipeline -..up..> MCPServer : "4. Tool Response:\nPipeline Status/Results"
+
+MCPServer -down-> AzureBoard : "Tool Execution:\nQuery/Update Work Items"
+AzureBoard -..up..> MCPServer : "Tool Response:\nWork Item Data"
+
+MCPServer -down-> PolarionDocs : "Tool Execution:\nFetch/Update Documents"
+PolarionDocs -..up..> MCPServer : "Tool Response:\nDocument Content"
+
+MCPServer -down-> SonarQubeServer : "Tool Execution:\nQuery Code Quality"
+SonarQubeServer -..up..> MCPServer : "Tool Response:\nQuality Reports"
+
+' New Test Document System interaction
+MCPServer -down-> TestDocSystem : "Tool Execution:\nVector Search Queries"
+TestDocSystem -..up..> MCPServer : "Tool Response:\nRelevant PDF Content"
+
+' Test Document internal relationship
+TestDocTools -right-> VectorDB : "Query"
+VectorDB -..left..> TestDocTools : "Results"
+
+' Add notes
+note bottom of MCPClient
+Handles IDE context
+Manages user interactions
+Communicates directly with MCP Server
+Can also communicate with LLM Host
+Discovers available tools during initialization
+end note
+
+note top of MCPServer
+Processes requests from MCP Client
+Provides IDE/workspace capabilities
+Integrates with external systems
+Acts as central integration hub
+end note
+
+note top of ToolRegistry
+Maintains catalog of all available tools
+Each tool has name, description, parameters
+Organizes tools by category and capability
+Enforces security and access controls
+end note
+
+note top of ToolDiscovery
+Exposes available tools to MCP Client
+Handles tool capability negotiation
+Provides tool metadata and schemas
+Enables dynamic tool discovery
+end note
+
+note right of LLMHost
+Runs Claude model
+Processes natural language
+Communicates directly with MCP Client
+Does not communicate directly with MCP Server
+Uses tools via MCP Client requests
+end note
+
+note bottom of PipelineTools
+Tool examples:
+- triggerPipeline(name, params)
+- getPipelineStatus(id)
+- getLatestBuildResults(project)
+  end note
+
+note bottom of BoardTools
+Tool examples:
+- createWorkItem(type, title, description)
+- queryWorkItems(filter)
+- updateWorkItemStatus(id, status)
+  end note
+
+note bottom of DocTools
+Tool examples:
+- getDocument(id)
+- searchDocuments(query)
+- exportDocumentAsPDF(id)
+  end note
+
+note bottom of AnalysisTools
+Tool examples:
+- getCodeQualityMetrics(project)
+- getSecurityVulnerabilities(project)
+- getCodeCoverage(project)
+  end note
+
+note bottom of TestDocTools
+Tool examples:
+- semanticSearch(query, topK)
+- retrieveTestDocSection(id, section)
+- similarityQuery(text, threshold)
+- getRelatedTestCases(requirement)
+  end note
+
+note bottom of VectorDB
+Stores tokenized PDF documents
+Enables semantic search
+Maintains embeddings for fast retrieval
+Supports similarity and relevance queries
+end note
+
+legend right
+--- Request (Solid line)
+.... Response (Dotted line)
+Tool Discovery & Registry Flow:
+1. MCP Client requests available tools
+2. MCP Server responds with tool catalog
+3. MCP Client invokes tool via MCP Server
+4. External system executes tool and returns results
+   endlegend
+
+' Add title
+title MCP Architecture with Tool Registry and Discovery
+
+@enduml

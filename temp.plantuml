@@ -1,0 +1,74 @@
+@startuml
+title MCP Architecture for Agentic Solutions as Heading
+
+rectangle "Taken from Co-pilot" <<Comments>> {
+   [Generate a plantuml for  MCP architecture including MCP client,server,tools,LLM,Agent, include in the diagram all the main ingredients to explain the mcp architecture capabilities as an architect presenting it for solutioning agentic solutions] as Prompt
+}
+
+
+skinparam rectangle {
+  BackgroundColor<<Client>> #D5E8D4
+  BackgroundColor<<Server>> #F8CECC
+  BackgroundColor<<Tool>>   #FFF2CC
+  BackgroundColor<<LLM>>    #DAE8FC
+  BackgroundColor<<Agent>>  #E1D5E7
+}
+
+actor "End User" as User
+
+
+
+rectangle "MCP Client" <<Client>> {
+  [UI / CLI] as UI
+  [Session Manager] as SessMgr
+  [Context Builder] as CtxBuild
+}
+
+rectangle "MCP Server" <<Server>> {
+  [Protocol Handler] as ProtoH
+  [Tool Registry] as ToolReg
+  [Agent Orchestrator] as AgOrch
+  [LLM Connector] as LLMConn
+}
+
+rectangle "Tools" <<Tool>> {
+  [Search API] as SearchAPI
+  [Database API] as DBAPI
+  [Custom Business Logic] as CustomLogic
+}
+
+rectangle "LLM" <<LLM>> {
+  [Language Model Core] as LLMCore
+  [Embedding/Vector Store] as EmbStore
+}
+
+rectangle "Agent" <<Agent>> {
+  [Planning Module] as PlanMod
+  [Reasoning Engine] as ReasonEng
+  [Action Executor] as ActExec
+}
+
+User --> UI : Requests / Queries
+UI --> SessMgr : Initiate Session
+SessMgr --> CtxBuild : Build Context
+CtxBuild --> ProtoH : Send Context & Request
+
+ProtoH --> ToolReg : Discover Available Tools
+ProtoH --> AgOrch : Forward Request
+AgOrch --> LLMConn : Prepare LLM Call
+LLMConn --> LLMCore : Query / Prompt
+LLMCore --> EmbStore : Retrieve Context
+
+AgOrch --> PlanMod : Break Down Task
+PlanMod --> ReasonEng : Generate Reasoning Steps
+ReasonEng --> ActExec : Execute Actions
+ActExec --> Tools : Call Tool APIs
+
+Tools --> ActExec : Return Results
+ActExec --> ReasonEng : Update Reasoning
+ReasonEng --> PlanMod : Adjust Plan if Needed
+PlanMod --> AgOrch : Return Final Output
+
+AgOrch --> ProtoH : Wrap Response
+ProtoH --> UI : Deliver Output
+@enduml

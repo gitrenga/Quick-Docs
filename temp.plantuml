@@ -1,9 +1,6 @@
 @startuml
 title MCP Architecture for Agentic Solutions as Heading
 
-rectangle "Taken from Co-pilot" <<Comments>> {
-   [Generate a plantuml for  MCP architecture including MCP client,server,tools,LLM,Agent, include in the diagram all the main ingredients to explain the mcp architecture capabilities as an architect presenting it for solutioning agentic solutions] as Prompt
-}
 
 
 skinparam rectangle {

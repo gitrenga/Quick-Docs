@@ -81,3 +81,167 @@
     "pureCosmeticEvents": "React UiEventBus only → no bridge → no persistence"
   }
 }
+{
+  "events": [
+    {
+      "eventName": "PatientAdmitted",
+      "eventType": "PatientLifecycle",
+      "eventSource": "React WebView (UI)",
+      "publishedBy": "JS Bridge → Kotlin",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "NORMAL",
+      "priority": "HIGH",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0001",
+        "timestamp": "2025-04-05T08:22:11.123Z",
+        "patientId": "PT-789123",
+        "mrn": "MRN456789",
+        "name": "John Doe",
+        "dob": "1975-03-12",
+        "admittedBy": "nurse-anna"
+      },
+      "flow": "UI → postMessage → JS Bridge → DomainEventBus.publish(..., persistent=true) → INSERT into Outbox Table + NORMAL buffer → EventReactor polls NORMAL → dispatches to listeners"
+    },
+    {
+      "eventName": "HeartRateMeasured",
+      "eventType": "VitalSignMeasurement",
+      "eventSource": "ECG Sensor (via MQTT)",
+      "publishedBy": "SensorGateway Service",
+      "eventBus": "IN_PROCESS",
+      "bufferType": "HIGH_PRIORITY",
+      "priority": "CRITICAL",
+      "persistenceRequired": false,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0002",
+        "timestamp": "2025-04-05T08:22:11.500Z",
+        "bpm": 78,
+        "flags": 0,
+        "sourceDevice": "ECG-01"
+      },
+      "flow": "ECG → MQTT(topic: vital/ecg) → SensorGateway → DomainEventBus.publish(..., highPriority=true) → directly into HIGH_PRIORITY buffer → EventReactor polls HIGH_PRIORITY first → instant dispatch to trend, alarm engine, waveform display"
+    },
+    {
+      "eventName": "AlarmActivated",
+      "eventType": "ClinicalAlarm",
+      "eventSource": "AlarmEngine (Kotlin)",
+      "publishedBy": "AlarmEngine",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "HIGH_PRIORITY",
+      "priority": "CRITICAL",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0003",
+        "timestamp": "2025-04-05T08:22:15.000Z",
+        "alarmId": "ALM-9001",
+        "code": "ASYSTOLE",
+        "severity": "RED",
+        "message": "No heartbeat detected"
+      },
+      "flow": "AlarmEngine → DomainEventBus.publish(..., persistent=true, highPriority=true) → HIGH_PRIORITY buffer + INSERT Outbox → EventReactor polls HIGH_PRIORITY → immediate audio/visual alarm + persistent log"
+    },
+    {
+      "eventName": "AlarmSilenced",
+      "eventType": "ClinicalAlarm",
+      "eventSource": "React WebView (UI)",
+      "publishedBy": "JS Bridge",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "NORMAL",
+      "priority": "HIGH",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0004",
+        "timestamp": "2025-04-05T08:22:20.100Z",
+        "alarmId": "ALM-9001",
+        "silencedBy": "nurse-anna",
+        "durationSeconds": 120
+      },
+      "flow": "Nurse taps Silence → postMessage → JS Bridge → DomainEventBus.publish(..., persistent=true) → NORMAL buffer + Outbox → EventReactor → stops alarm sound + audit trail"
+    },
+    {
+      "eventName": "SpO2Measured",
+      "eventType": "VitalSignMeasurement",
+      "eventSource": "Pulse Oximeter (MQTT)",
+      "publishedBy": "SensorGateway Service",
+      "eventBus": "IN_PROCESS",
+      "bufferType": "HIGH_PRIORITY",
+      "priority": "HIGH",
+      "persistenceRequired": false,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0005",
+        "timestamp": "2025-04-05T08:22:12.000Z",
+        "spo2": 95,
+        "pulse": 80,
+        "perfusionIndex": 1.8
+      },
+      "flow": "SpO2 sensor → MQTT → SensorGateway → DomainEventBus(highPriority) → HIGH_PRIORITY buffer → real-time display + hypoxia detection"
+    },
+    {
+      "eventName": "DeviceDisconnected",
+      "eventType": "DeviceLifecycle",
+      "eventSource": "MQTT connection loss",
+      "publishedBy": "SensorGateway",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "HIGH_PRIORITY",
+      "priority": "CRITICAL",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0006",
+        "timestamp": "2025-04-05T08:25:00.000Z",
+        "modality": "ECG",
+        "reason": "LEAD_OFF"
+      },
+      "flow": "MQTT disconnect → SensorGateway → DomainEventBus(highPriority + persistent) → immediate technical alarm + logged forever"
+    },
+    {
+      "eventName": "TrendDataExported",
+      "eventType": "DataExport",
+      "eventSource": "ExportService",
+      "publishedBy": "ExportService (Kotlin)",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "BATCHING",
+      "priority": "NORMAL",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0007",
+        "timestamp": "2025-04-05T09:00:00.000Z",
+        "startTime": "2025-04-05T08:00:00Z",
+        "endTime": "2025-04-05T09:00:00Z",
+        "exportedBy": "nurse-anna",
+        "format": "PDF"
+      },
+      "flow": "Export button → ExportService → DomainEventBus(batched + persistent) → BATCHING buffer + Outbox → background PDF generation + audit"
+    },
+    {
+      "eventName": "UserLoggedIn",
+      "eventType": "UserAction",
+      "eventSource": "Login Screen (React)",
+      "publishedBy": "LoginService via JS Bridge",
+      "eventBus": "PERSISTENT_BACKED",
+      "bufferType": "NORMAL",
+      "priority": "NORMAL",
+      "persistenceRequired": true,
+      "examplePayload": {
+        "eventId": "evt-550e8400-0008",
+        "timestamp": "2025-04-05T08:00:00.000Z",
+        "userId": "nurse-anna",
+        "role": "RN",
+        "authenticationMethod": "PIN"
+      },
+      "flow": "Login success → JS Bridge → DomainEventBus(persistent) → NORMAL buffer + Outbox → audit trail"
+    }
+  ],
+  "summary": {
+    "eventBusTypes": [
+      "IN_PROCESS → DomainEventBus (in-memory, fast path)",
+      "PERSISTENT_BACKED → Outbox Table (Room/SQLite) + replay via WorkManager"
+    ],
+    "bufferTypes": [
+      "HIGH_PRIORITY → Critical real-time (vitals, alarms, disconnects)",
+      "NORMAL → Standard processing",
+      "BATCHING → Slow peripherals (printer, export)"
+    ],
+    "eventReactorBehavior": "Polls HIGH_PRIORITY first → then NORMAL → then BATCHING → never blocks critical path",
+    "persistenceRule": "Any event required for FDA 21 CFR Part 11 / IEC 62304 audit trail → persistent=true → Outbox Table"
+  }
+}

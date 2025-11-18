@@ -1,0 +1,83 @@
+{
+  "uiEventBus": {
+    "name": "UiEventBus (React/TypeScript in WebView)",
+    "type": "IN_PROCESS (pure in-memory EventEmitter)",
+    "persistence": "NEVER",
+    "location": "WebView process only",
+    "purpose": "Ultra-fast UI feedback, animations, local state sync",
+    "eventReactor": "React rendering cycle + useEffect",
+    "events": [
+      {
+        "eventName": "UiThemeChanged",
+        "eventSource": "Settings screen toggle",
+        "publishedBy": "ThemeContext or Zustand store",
+        "bufferType": "NONE (direct emit)",
+        "examplePayload": { "darkMode": true },
+        "flow": "User toggles dark mode → UiEventBus.emit() → all components re-render instantly"
+      },
+      {
+        "eventName": "UiTabChanged",
+        "eventSource": "Bottom navigation",
+        "publishedBy": "TabNavigator component",
+        "bufferType": "NONE",
+        "examplePayload": { "tab": "waveform" },
+        "flow": "User taps Waveform tab → instant screen switch"
+      },
+      {
+        "eventName": "UiAlarmBannerFlash",
+        "eventSource": "AlarmEngine → postMessage → React",
+        "publishedBy": "Kotlin JS Bridge (postMessage)",
+        "bufferType": "NONE",
+        "examplePayload": { "severity": "RED", "message": "ASYSTOLE" },
+        "flow": "Critical alarm → Kotlin publishes AlarmActivated → JS Bridge sends postMessage → React catches → UiEventBus.emit() → banner flashes red + sound"
+      },
+      {
+        "eventName": "UiWaveformDataUpdate",
+        "eventSource": "SensorGateway → postMessage (real-time waveform)",
+        "publishedBy": "Kotlin (frequent postMessage)",
+        "bufferType": "NONE (or small debounce buffer in React)",
+        "examplePayload": { "ecgSamples": [120, 125, 118, ...], "timestamp": "2025-04-05T08:22:11.500Z" },
+        "flow": "ECG sensor → MQTT → SensorGateway → postMessage() every 4 ms → React receives → UiEventBus.emit() → canvas redraw at 250 fps"
+      },
+      {
+        "eventName": "UiToastShown",
+        "eventSource": "Any component",
+        "publishedBy": "ToastService in React",
+        "bufferType": "NONE",
+        "examplePayload": { "message": "Patient admitted", "type": "success" },
+        "flow": "Transient feedback → disappears after 3 seconds"
+      },
+      {
+        "eventName": "UiNumericValueChanged",
+        "eventSource": "Live vital signs display",
+        "publishedBy": "Kotlin → postMessage (only numeric values)",
+        "bufferType": "NONE",
+        "examplePayload": { "hr": 78, "spo2": 95, "nibp": "120/80" },
+        "flow": "Every second → Kotlin sends aggregated numerics → React updates big numbers instantly"
+      },
+      {
+        "eventName": "UiAlarmSilencedLocally",
+        "eventSource": "Silence button in banner",
+        "publishedBy": "AlarmBanner component",
+        "bufferType": "NONE",
+        "examplePayload": { "duration": 120 },
+        "flow": "Nurse taps Silence → UiEventBus.emit() → banner hides + THEN forwards to Kotlin via postMessage → becomes AlarmSilenced domain event (persistent)"
+      }
+    ]
+  },
+  "importantRule": {
+    "description": "UI events vs Domain events",
+    "uiOnly": "Stay in React UiEventBus → never persist, never go to SQLite",
+    "clinicalOrAudit": "Must cross the bridge → become DomainEvent → go to DomainEventBus (Kotlin)",
+    "examplesOfCrossing": [
+      "UiAlarmSilencedLocally → postMessage → becomes AlarmSilenced (persistent)",
+      "UiPatientAdmittedForm → postMessage → becomes PatientAdmitted (persistent)",
+      "UiThemeChanged → stays in React only (no clinical impact)"
+    ]
+  },
+  "finalFlowDiagram": {
+    "realTimeVisualAlarmsAndWaveforms": "Kotlin DomainEventBus → postMessage → React UiEventBus → instant UI",
+    "userActionsWithClinicalMeaning": "React UiEventBus → postMessage → Kotlin DomainEventBus → persistent + buffers",
+    "pureCosmeticEvents": "React UiEventBus only → no bridge → no persistence"
+  }
+}

@@ -1,0 +1,59 @@
+@startuml
+title C4 Model - Level 4: Code Example\nDomainEventBus with All Flavours (Kotlin 2025)
+
+class DomainEventBus {
+    +publish(event: Any, options: PublishOptions)
+    -highPriorityQueue: ConcurrentLinkedQueue<Any>
+    -normalQueue: ConcurrentLinkedQueue<Any>
+    -batchingQueue: BlockingQueue<Runnable>
+    -reactorLoop: Thread / Coroutine
+    {static} +subscribe<T>(handler: (T) -> Unit)
+}
+
+note right of DomainEventBus
+    The ONE logical Event Bus
+    Contains:
+    • EventReactor (internal loop)
+    • 3 Event Buffers (high, normal, batch)
+    • Optional persistent backend (Outbox)
+end note
+
+class PublishOptions {
+    +persistent: Boolean = false
+    +highPriority: Boolean = false
+    +batched: Boolean = false
+}
+
+class EventReactor {
+    -loop()
+    -dispatch(event: Any)
+}
+
+class OutboxEvent {
+    +id: Long
+    +type: String
+    +payload: String
+    +createdAt: Instant
+}
+
+DomainEventBus o--> "1" EventReactor
+DomainEventBus --> "high" high_prio : uses
+DomainEventBus --> "normal" normal_prio : uses
+DomainEventBus --> "batch" batch_buffer : uses
+DomainEventBus --> "persistent" OutboxEvent : inserts if needed
+
+PublishOptions --> DomainEventBus
+
+package "Listeners" {
+    [BeepListener] --> DomainEventBus : subscribe()
+    [PrintListener] --> DomainEventBus
+    [UiUpdateListener] --> DomainEventBus
+}
+
+package "Publishers" {
+    [OrderService] --> DomainEventBus : publish(..., persistent=true)
+    [SensorGateway] --> DomainEventBus : publish(RfidDetected, highPriority=true)
+    [ReactBridge] --> DomainEventBus
+}
+
+@enduml

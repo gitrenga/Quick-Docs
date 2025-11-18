@@ -1,0 +1,27 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C4 Model - Level 2: Container Diagram\nOffline Industrial Tablet
+
+Container_Boundary(tablet, "Android Tablet (Single Device)") {
+    Container(webview, "React WebView", "TypeScript + React", "UI Layer\nEventEmitter-based UiEventBus")
+    Container(kotlin_app, "Kotlin Android App", "Kotlin/JVM", "Main Process\nDomain Logic + Services")
+    Container(mqtt_gateway, "SensorGateway Service", "Kotlin", "Background service\nMQTT → Domain Events")
+    Container_Ext(mosquitto, "Mosquitto Broker", "C process", "Local MQTT server")
+    ContainerDb(sqlite, "SQLite + Room", "Local DB", "Outbox Table\nSettings, Orders, Logs")
+}
+
+Rel(webview, kotlin_app, "postMessage()", "JS Bridge")
+Rel(kotlin_app, webview, "update UI", "WebView callbacks")
+Rel(mosquitto, mqtt_gateway, "MQTT Subscribe", "tcp://127.0.0.1:1883")
+Rel(mqtt_gateway, kotlin_app, "publish()", "DomainEventBus")
+Rel(kotlin_app, sqlite, "INSERT/SELECT", "Room DAO")
+Rel(sqlite, kotlin_app, "Outbox Poller → publish()", "WorkManager")
+
+note right of kotlin_app
+    Contains the ONE TRUE
+    DomainEventBus (logical)
+    with multiple physical backends
+end note
+
+@enduml

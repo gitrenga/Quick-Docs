@@ -1,0 +1,71 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C4 Model - Level 3: Component Diagram\nKotlin Android App - The Real Event-Driven Core
+
+Boundary(kotlin_app, "Kotlin Android App") {
+
+    Component(eventbus, "DomainEventBus", "Kotlin Singleton", "Logical Event Bus\nSingle Source of Truth") {
+        note right
+            One logical bus
+            Multiple physical implementations:
+            • In-memory dispatch
+            • SQLite Outbox (persistent)
+            • Optional future sync
+        end note
+    }
+
+    Component(reactor, "EventReactor", "Internal Dispatcher Loop", "Inside DomainEventBus\nPulls from buffers → calls listeners") {
+        note bottom
+            Not a separate class
+            But we call it out for clarity
+            Handles priority + ordering
+        end note
+    }
+
+    ' === Event Buffers (flavours) ===
+    Component(high_prio, "High-Priority Buffer", "ConcurrentLinkedQueue", "EmergencyStop, WeightStable, RfidTagDetected")
+    Component(normal_prio, "Normal Buffer", "ConcurrentLinkedQueue", "99% of events")
+    Component(batch_buffer, "Batching Buffer", "BlockingQueue + Timer", "Printer jobs, CSV export")
+    Component(outbox, "Outbox Table", "Room @Entity", "Persistent Event Bus\nNever-lose events: OrderSaved, Calibration")
+
+    ' === Listeners ===
+    Component(ui_sync, "UI Sync Listeners", "Kotlin", "Update WebView, Toast")
+    Component(beep_led, "Real-time Feedback", "Kotlin", "Beep, LED, Vibration")
+    Component(printer, "Printer Service", "Kotlin", "Slow peripheral")
+    Component(logger, "CSV Logger", "Kotlin", "Background export")
+    Component(outbox_poller, "Outbox Poller", "WorkManager", "Reliable delivery of persisted events")
+
+    ' === Publishers ===
+    Component(order_service, "OrderService", "Kotlin", "Business logic")
+    Component(sensor_gateway, "SensorGateway", "Kotlin Service", "MQTT → Domain Events")
+    Component(ui_bridge, "JS Bridge", "JavascriptInterface", "React → Kotlin")
+
+    ' === Relationships ===
+    Rel(order_service, eventbus, "publish(event, options)")
+    Rel(ui_bridge, eventbus, "publish(UiEvent)")
+    Rel(sensor_gateway, eventbus, "publish(WeightMeasured, RfidDetected)")
+
+    Rel(eventbus, high_prio, "→ HIGH")
+    Rel(eventbus, normal_prio, "→ NORMAL")
+    Rel(eventbus, batch_buffer, "→ BATCH")
+    Rel(eventbus, outbox, "INSERT if persistent=true")
+
+    Rel(high_prio, reactor, "poll()")
+    Rel(normal_prio, reactor, "poll()")
+    Rel(batch_buffer, reactor, "poll()")
+
+    Rel(reactor, beep_led, "instant call")
+    Rel(reactor, ui_sync, "call")
+    Rel(reactor, printer, "via batch buffer")
+    Rel(reactor, logger, "via batch buffer")
+
+    Rel(outbox, outbox_poller, "query new")
+    Rel(outbox_poller, reactor, "re-publish persisted events")
+}
+
+Lay_D(eventbus, reactor)
+Lay_D(high_prio, reactor)
+Lay_D(normal_prio, reactor)
+
+@enduml

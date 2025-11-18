@@ -1,0 +1,35 @@
+@startuml
+!define PRIMARY #10b981
+!define SECONDARY #f59e0b
+!define DANGER #ef4444
+!define PERSISTENT #1e40af
+!define TRANSPORT #7c3aed
+
+' ============================
+' C4 Level 1: System Context
+' ============================
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C4 Model - Offline Industrial Tablet (2025)\nLevel 1: System Context
+
+Person(operator, "Operator / Warehouse Worker", "Uses the tablet for weighing, RFID, printing")
+Person(technician, "Field Technician", "Calibrates, debugs, replays events")
+
+System_Ext(sensors, "Physical Sensors & PLCs", "Scale, RFID reader, PLC, buttons")
+System_Ext(mosquitto, "Mosquitto MQTT Broker", "Local process on tablet\nlocalhost:1883")
+
+System(tablet, "Industrial Tablet App", "Offline-first Android + React + Kotlin") {
+    note right of tablet
+        Fully offline
+        No cloud dependency
+        Must never lose critical orders
+        Real-time feedback required
+    end note
+}
+
+operator --> tablet : Scans, weighs, prints
+technician --> tablet : Debug, replay, calibrate
+sensors --> mosquitto : Publishes raw telemetry
+mosquitto --> tablet : MQTT messages
+
+@enduml
